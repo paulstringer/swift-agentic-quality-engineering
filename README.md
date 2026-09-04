@@ -3,6 +3,6 @@ Quality engineering infrastructure for AI-assisted and autonomous Swift developm
 
 ## Part of Swift Agentic Engineering
 
-[Swift Agentic Engineering]([https://github.com/...](https://github.com/paulstringer/swift-agentic-engineering)
+[Swift Agentic Engineering](https://github.com/paulstringer/swift-agentic-engineering)
 
 The broader research and engineering programme exploring disciplined software development with AI coding agents.
