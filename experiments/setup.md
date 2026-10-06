@@ -16,7 +16,7 @@ Each experiment runs on its own branch (`exp-NN-<pack>`) cut from `main`. `main`
 
 ## Teardown after every run
 
-Tear the swarm down from its UI, then run `experiments/teardown.sh`. The swarm installs a `commit-msg` hook in the shared `.git/hooks/`, so it applies to every branch. On `main` the hook points at scripts that do not exist and every commit fails. The script removes that hook (only if it is SwarmForge's), prunes worktrees and reports leftover `.swarmforge/` and `.worktrees/`. Run it before committing anything on `main`, and never commit with `--no-verify` to get round the hook.
+Tear the swarm down from its UI, then run `experiments/teardown.sh`. The swarm installs a `commit-msg` hook in the shared `.git/hooks/`, so it applies to every branch. On `main` the hook points at scripts that do not exist and every commit fails. The script removes that hook (only if it is SwarmForge's), removes the role worktrees, their `swarmforge-*` branches and the run state (`.swarmforge/`, `.worktrees/`), so the next run starts clean. Write the findings note first: the run state is deleted. Run it before committing anything on `main`, and never commit with `--no-verify` to get round the hook.
 
 ## Why the flag is standing
 
