@@ -14,9 +14,37 @@ Each experiment runs on its own branch (`exp-NN-<pack>`) cut from `main`. `main`
 6. Liveness check: within a few minutes of typing the brief, confirm there is a `claude` process per role and the coder shows tool activity or a first commit. The board alone does not show whether an agent is running.
 7. Use `experiments/brief-import-graph.md` unchanged, and fill in `experiments/findings-template.md`.
 
+## Pinned starting points
+
+Briefs that extend existing code start from a tagged commit, so every run begins from identical code. `main` still carries no product code: the tag keeps the commit reachable after its `exp-*` branch is deleted.
+
+| Tag | Commit | What it is | Used by |
+|---|---|---|---|
+| `baseline/depgraph-exp02` | `06e815f` | `depgraph` as produced by exp-02 (two-pack): 107 source lines, 9 tests | `brief-depgraph-metrics.md` |
+
+To start a run from a pinned baseline, after cutting `exp-NN-<pack>` from `main` and installing the pack (steps 1 to 4), copy only the product files, then commit them as the run's baseline:
+
+`git checkout baseline/depgraph-exp02 -- Package.swift Package.resolved Sources Tests Fixtures .gitignore`
+
+Tags are local: they are not pushed unless the operator decides to. If the repo is cloned elsewhere, push the tag first (`git push origin baseline/depgraph-exp02`) or the baseline is lost with this machine.
+
+## Capture benchmarks at the end of every run
+
+Do this after the swarm stops and **before** `teardown.sh`, and write the numbers into the findings note (Measurements section). Use the format of `swift-agentic-engineering/research/findings/benchmarks-first-runs.md`.
+
+1. **Find every session of the run.** Transcripts are `~/.claude-swarm/projects/<project-dir>/*.jsonl` (main checkout and `…--worktrees-<role>` for each role). Any agent restarted without `CLAUDE_CONFIG_DIR` logs to `~/.claude/projects/` instead, so check both. Include only sessions whose first user message starts `Read swarmforge/constitution.prompt` (agent sessions). Operator probe sessions are setup cost, not run cost: list them separately.
+2. **Per session, read the last `cost-state` record**: `totalCostUSD`, `modelUsage` (input, output, thinking, cache read, cache write tokens, model name), `totalAPIDuration`, `totalToolDuration`.
+   `python3 -I -c` over the file is enough: parse each line as JSON and keep the record with `type == "cost-state"`.
+3. **Agent-active window**: first and last assistant-message `timestamp` (UTC; convert to local time for the note). Note it is not the same as launch-to-done wall-clock.
+4. **Tools and role**: count `tool_use` names per session and note the role (coder, cleaner, …).
+5. **Classify each session**: produced the result, or produced nothing (failed launch, restart, abandoned). Report two totals: all sessions, and result-producing sessions only.
+6. **Code and tests** on the result commit: `git ls-files Sources Tests Fixtures | xargs wc -l`, test count and time from `swift test`, commits per role from `git log main..HEAD`.
+7. **Gate behaviour**: from the transcripts, record which quality tools each role tried, what they returned, and any gate that fired (e.g. `AUDIT_REQUIRED`). This is the evidence for "did the quality feedback change what the agents did?".
+8. State the cost caveat: `costUSD` is Claude Code's estimate, not an invoice. Record the model name for each session.
+
 ## Teardown after every run
 
-Tear the swarm down from its UI, then run `experiments/teardown.sh`. The swarm installs a `commit-msg` hook in the shared `.git/hooks/`, so it applies to every branch. On `main` the hook points at scripts that do not exist and every commit fails. The script removes that hook (only if it is SwarmForge's), removes the role worktrees, their `swarmforge-*` branches and the run state (`.swarmforge/`, `.worktrees/`), so the next run starts clean. Write the findings note first: the run state is deleted. Run it before committing anything on `main`, and never commit with `--no-verify` to get round the hook.
+Tear the swarm down from its UI, capture benchmarks (above), then run `experiments/teardown.sh`. The swarm installs a `commit-msg` hook in the shared `.git/hooks/`, so it applies to every branch. On `main` the hook points at scripts that do not exist and every commit fails. The script removes that hook (only if it is SwarmForge's), removes the role worktrees, their `swarmforge-*` branches and the run state (`.swarmforge/`, `.worktrees/`), so the next run starts clean. Write the findings note first: the run state is deleted. Run it before committing anything on `main`, and never commit with `--no-verify` to get round the hook.
 
 ## Why the flag is standing
 
