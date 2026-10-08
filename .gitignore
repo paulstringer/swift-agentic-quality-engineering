@@ -1,7 +1,4 @@
-.DS_Store
 .build/
 .swiftpm/
-
-# SwarmForge generated state
-.swarmforge/
-.worktrees/
+tmp/
+.DS_Store
