@@ -51,13 +51,13 @@ Briefs that extend existing code start from a tagged commit, so every run begins
 
 | Tag | Commit | What it is | Used by |
 |---|---|---|---|
-| `baseline/depgraph-exp02` | `06e815f` | `depgraph` as produced by exp-02 (two-pack): 107 source lines, 9 tests | `brief-depgraph-metrics.md` |
+| `baseline/depgraph-exp03` | `138877c` | `depgraph` as produced by exp-03 (two-pack, clean run): 153 source lines, 14 tests, all six criteria met | `brief-depgraph-metrics.md` |
 
 To start a run from a pinned baseline, after cutting `exp-NN-<pack>` from `main` and installing the pack (steps 1 to 4), copy only the product files, then commit them as the run's baseline:
 
-`git checkout baseline/depgraph-exp02 -- Package.swift Package.resolved Sources Tests Fixtures .gitignore`
+`git checkout baseline/depgraph-exp03 -- Package.swift Package.resolved Sources Tests Fixtures .gitignore`
 
-Tags are local: they are not pushed unless the operator decides to. If the repo is cloned elsewhere, push the tag first (`git push origin baseline/depgraph-exp02`) or the baseline is lost with this machine.
+Tags are local: they are not pushed unless the operator decides to. If the repo is cloned elsewhere, push the tag first (`git push origin baseline/depgraph-exp03`) or the baseline is lost with this machine.
 
 ## Restarting an agent by hand
 
