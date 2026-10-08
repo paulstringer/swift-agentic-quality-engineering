@@ -34,7 +34,7 @@ Both runs so far (exp-01, exp-02) had a coder that never started: the pane's lau
 
 SwarmForge types one line into each role's tmux pane (`launch-command` in `swarmforge/scripts/swarmforge.bb`, checked against the exp-02 pack with `--test-launch-command`). The line does **not** set `CLAUDE_CONFIG_DIR`: the agent only gets it if the pane's environment already has it. A hand restart must set it, or the agent loads the operator's global settings and hits `blockReadsOutsideWorkingDirectories` prompts (exp-02, finding 2).
 
-1. Attach to the role's pane and clear the broken line: `tmux -S .swarmforge/tmux-socket attach-session -t swarmforge-<role>`, then `Ctrl-C` until the shell prompt is clean (`Ctrl-D` is not needed).
+1. Attach to the role's pane and clear the broken line: `tmux -S "$(cat .swarmforge/tmux-socket)" attach-session -t swarmforge-<role>` (the file holds the socket path), then `Ctrl-C` until the shell prompt is clean.
 2. Run, with `<root>` the repo root, `<wt>` the role's worktree (`<root>` for the coder, `<root>/.worktrees/cleaner` for the cleaner), `<Role>` the display name (`Coder`, `Cleaner`):
 
 ```
