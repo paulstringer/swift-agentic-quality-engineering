@@ -10,9 +10,40 @@ Each experiment runs on its own branch (`exp-NN-<pack>`) cut from `main`. `main`
    - backend: `claude` (the pack defaults, `grok` and `codex`, are not installed here)
    - append `--dangerously-skip-permissions` as an extra argument, after any `batch`/`back-one`/`back-all` tokens
 4. Commit the pack and config on the experiment branch.
-5. Launch with the dedicated config dir: `CLAUDE_CONFIG_DIR=$HOME/.claude-swarm ./swarm` (see below).
+5. Launch with the dedicated config dir **and** the minimal shell dir: `ZDOTDIR=$HOME/.zdotdir-swarm CLAUDE_CONFIG_DIR=$HOME/.claude-swarm ./swarm` (see "Why a minimal ZDOTDIR" and "Why a dedicated config dir"). One-time: `mkdir -p ~/.zdotdir-swarm && touch ~/.zdotdir-swarm/.zshrc`.
 6. Liveness check: within a few minutes of typing the brief, confirm there is a `claude` process per role and the coder shows tool activity or a first commit. The board alone does not show whether an agent is running.
 7. Use the experiment's brief (`experiments/brief-*.md`) unchanged, and fill in `experiments/findings-template.md`.
+
+## What a start looks like
+
+`ZDOTDIR=$HOME/.zdotdir-swarm CLAUDE_CONFIG_DIR=$HOME/.claude-swarm ./swarm` prints (two-pack; the dashboard port changes every run):
+
+```
+SwarmForge v1.0 Starting
+Launching SwarmForge tmux sessions...
+Started handoff daemon with OS sleep prevention.
+Dashboard: http://127.0.0.1:<port>
+Starting agents...
+  [Coder] started in session swarmforge-coder
+  [Cleaner] started in session swarmforge-cleaner
+
+SwarmForge is ready.
+Working directory: <root>
+Tip: Reattach manually with 'tmux -S /tmp/swarmforge-<user>/<id>.sock attach-session -t <session-name>' if needed.
+
+No visible Terminal surfaces; use the dashboard.
+```
+
+- "No visible Terminal surfaces" is expected: the roles are `window-invisible`. Use the dashboard, or attach with the tmux line it prints.
+- **"started in session" does not mean the agent is running.** It is printed right after the launch line is typed into the pane (`launch-role!`), without checking the result. Do the liveness check every time.
+
+## Why a minimal ZDOTDIR
+
+SwarmForge builds one long shell line per role (about 1,500 characters for the coder with our 99-character repo path) and types it into a freshly started zsh pane with `tmux send-keys`, without waiting for the shell to be ready. While zsh is still loading the operator's dotfiles (about 0.6 s here), typed-ahead input is held in the terminal's line buffer, which is limited to 1,024 characters on macOS. The coder's line goes over and is lost or cut, so `claude` never starts and the board still looks busy.
+
+An empty `.zshrc` in `~/.zdotdir-swarm` brings zsh's start-up to about 0.03 s. Tmux panes inherit `ZDOTDIR` from the launching shell, so no change to SwarmForge is needed. Tools still resolve, because the panes inherit the launching shell's `PATH`. Aliases and functions from the operator's dotfiles are not available to agents' shells, which also makes the agents' shell environment the same from run to run.
+
+This narrows the race but does not remove it. Evidence and test tables: `swift-agentic-engineering/research/findings/launch-race-fix.md`. A line under 1,024 characters (a short repo path, e.g. a symlink such as `/tmp/saqe` passed as `./swarm /tmp/saqe`) would remove the dependency on timing and is a further option, untested end to end.
 
 ## Pinned starting points
 
@@ -30,7 +61,7 @@ Tags are local: they are not pushed unless the operator decides to. If the repo 
 
 ## Restarting an agent by hand
 
-Both runs so far (exp-01, exp-02) had a coder that never started: the pane's launch command was garbled when the "You have new handoff mail" text was typed into it, leaving the shell at `quote>`. The root cause is in SwarmForge's launcher and is not fixed here (see below). When the liveness check fails, restart the role like this, and record it as an **operator action** in the findings.
+With the minimal `ZDOTDIR` launch the coder has started on its own in both launches so far, 2 of 2 (see "Why a minimal ZDOTDIR"). Without it, the coder's launch line was lost in 3 of 3 launches (exp-01, exp-02, and a test launch on 2026-10-08): the line is longer than the terminal's 1,024-character typed-ahead limit and zsh was still loading `.zshrc` when it arrived. If the liveness check ever fails anyway, restart the role like this and record it as an **operator action** in the findings.
 
 SwarmForge types one line into each role's tmux pane (`launch-command` in `swarmforge/scripts/swarmforge.bb`, checked against the exp-02 pack with `--test-launch-command`). The line does **not** set `CLAUDE_CONFIG_DIR`: the agent only gets it if the pane's environment already has it. A hand restart must set it, or the agent loads the operator's global settings and hits `blockReadsOutsideWorkingDirectories` prompts (exp-02, finding 2).
 
@@ -46,7 +77,7 @@ export SWARMFORGE_ROLE=<role> && export PATH=<root>/.swarmforge/bin:<wt>/swarmfo
 
 This is the same line the launcher builds, minus the pane-specific exit and cleanup wrapper that only the first role gets. Check it against `swarmforge.bb` again if SwarmForge is upgraded.
 
-**Open, not fixed:** the garbling itself. `handoffd.bb` `notify!` types the wake text into the pane with `tmux send-keys` without checking that an agent is running. That is an upstream (`unclebob/swarm-forge`) change, and changing it would alter the condition under test, so it needs a decision before any run depends on it.
+**Not a SwarmForge change:** the fix is in how we launch (minimal `ZDOTDIR`), so the SwarmForge scripts stay unmodified and runs stay comparable. An upstream change (send the line via a file, or wait for the shell prompt) would remove the cause but is not needed while the launch check passes.
 
 ## Capture benchmarks at the end of every run
 
