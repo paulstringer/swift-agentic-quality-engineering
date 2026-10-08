@@ -2,3 +2,7 @@
 .swiftpm/
 tmp/
 .DS_Store
+
+# SwarmForge generated state
+.swarmforge/
+.worktrees/
